@@ -68,21 +68,21 @@ async function run() {
       next()
     }
     app.get('/products',async(req,res)=>{
-      
-      //   const cursor= productCollection.find();
-      //   const page=req.query.page;
-      //   const size=parseInt(req.query.size);
-      //   let products;
-      // const count=await cursor.estimatedDocumentCount();
-      // if (page) {
-      //   products=await cursor.skip(page*size).limit(size).toArray();
-      // }
-      // else{
-      //   products=await cursor.toArray();
-      // }
-      //   res.send(count,products)
       const products=await productCollection.find().toArray();
+      
       res.send(products)
+    });
+    // productCount
+    app.get('/productCount',async(req,res)=>{
+      const totalProductNumber=await productCollection.estimatedDocumentCount();
+      res.send({totalProductNumber})
+    })
+    app.get('/conditionProducts',async(req,res)=>{
+      const page=parseInt(req.query.page);
+      const size=parseInt(req.query.size);
+      console.log(page,size)
+      const result=await productCollection.find().skip(page*size).limit(size).toArray();
+      res.send(result)
     });
     // add upload a products
     app.post('/products',verifyToken,verifyAdmin, async(req,res)=>{
