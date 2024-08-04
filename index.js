@@ -9,9 +9,7 @@ const port=process.env.PORT||9000;
 
 // using middleware
 app.use(cors())
-app.use(express.json())
-
-
+app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ihmonoj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 console.log('uri',uri)
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -30,10 +28,11 @@ async function run() {
     const reviewCollection=database.collection('reviews');
     const usersCollection=database.collection('users');
     const cartCollection=database.collection('carts');
+    const buyProductCollection=database.collection('buyProducts');
     const userMessageCollection=database.collection('messageInfo');
     const paymentCollection=database.collection('paymentInfo')
     // Connect the client to the server	(optional starting in v4.7)
-   // await client.connect();
+//await client.connect();
     app.post('/jwt',async(req,res)=>{
       const user=req.body;
       const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECCODE,{
@@ -78,13 +77,29 @@ async function run() {
       res.send({totalProductNumber})
     })
     app.get('/conditionProducts',async(req,res)=>{
+      // const {page,size,productCategory,color}=req.query;
+      console.log(req.query);
+      console.log(req,'dsfsfsd')
       const page=parseInt(req.query.page);
       const size=parseInt(req.query.size);
+      const productCategory=req.query.productCategory;
+      console.log(productCategory,'productCategory')
+
+/*       const productCategory=req.query.productCategory;
+console.log('prductCategory',productCategory)
+      const query={productCategory:productCategory};
+      console.log(query,productCategory,'query') */
+      // if (category) {
+      //   query.category=category;
+      // }
+      // if (color) {
+      //   query.color=color;
+      // }
       console.log(page,size)
       const result=await productCollection.find().skip(page*size).limit(size).toArray();
       res.send(result)
     });
-    // add upload a products
+    // add upload a products 
     app.post('/products',verifyToken,verifyAdmin, async(req,res)=>{
       const insertProducts=req.body;
       console.log(insertProducts,'insertProducts')
@@ -138,12 +153,27 @@ async function run() {
       const result=await userMessageCollection.insertOne(userMessage);
       res.send(result)
     });
+    // user contact message display
+    app.get('/userMessage',async(req,res)=>{
+      const result=await usersCollection.find().toArray();
+      res.send(result)
+    });
+
+    // user message delete 
+    app.delete('/userMessage/:id',async(req,res)=>{
+      const messageId=req.params.id;
+      const query={_id:new ObjectId(messageId)}
+      const result=await userMessageCollection.deleteOne(query);
+      res.send(result)
+    });
+    
     // review api
     app.post('/review',async(req,res)=>{
       const reviewText=req.body;
       const result=await reviewCollection.insertOne(reviewText);
       res.send(result);
     });
+
     app.get('/review',async(req,res)=>{
       const productId=req.query.productId;
       const query={productId:productId};
@@ -157,13 +187,8 @@ async function run() {
       const query={productBrandName:productBrand};
       const result=await productCollection.find(query).toArray();
       res.send(result);
-    })
-    app.get('/similarProducts',async(req,res)=>{
-     const category=req.query.productCategory;
-     const query={productCategory:category};
-     const result=await productCollection.find(query).toArray();
-     res.send(result);
     });
+
     app.get('/productColors',async(req,res)=>{
       const colors=req.query.productColor;
       console.log('colors',colors)
@@ -236,6 +261,17 @@ async function run() {
       const result=await cartCollection.deleteOne(query);
       res.send(result);
     });
+    // buyProduct
+    app.post('/buyProduct',async(req,res)=>{
+      const buyProduct=req.body;
+      const result=await buyProductCollection.insertOne(buyProduct);
+      res.send(result)
+    });
+    // get buyProduct
+    app.get('/buyProducts',async(req,res)=>{
+      const result=await buyProductCollection.find().toArray();
+      res.send(result)
+    });
 // payment intent
 app.post("/create-payment-intent",async(req,res)=>{
 const {price}=req.body;
@@ -259,10 +295,15 @@ app.post("/payments",async(req,res)=>{
   // carefully delete each item
   const query={_id:{
     $in:payment.cartIds.map(id=>new ObjectId(id))
-  }}
+  }};
+  // const buyQuery={
+  //   _id:{
+  //     $in:payment.buyPoductIds.map(id=>new ObjectId(id))
+  //   }}
   const deleteResult=await cartCollection.deleteMany(query);
-  console.log(deleteResult)
-  res.send({paymentResult,deleteResult})
+  const deleteBuyProduct=await buyProductCollection.deleteMany(query);
+  console.log(deleteBuyProduct,'dlsdfsldfjsldfjsl')
+  res.send({paymentResult,deleteResult,deleteBuyProduct})
 });
 app.get('/payments/:email',verifyToken,async(req,res)=>{
 const email=req.params.email;
@@ -344,10 +385,6 @@ res.json(result)
   
 
 
-    // Send a ping to confirm a successful connection
-    
-    // await client.db("admin").command({ ping: 1 });
-    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
   //  await client.close();
