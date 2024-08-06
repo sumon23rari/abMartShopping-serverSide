@@ -32,7 +32,7 @@ async function run() {
     const userMessageCollection=database.collection('messageInfo');
     const paymentCollection=database.collection('paymentInfo')
     // Connect the client to the server	(optional starting in v4.7)
-//await client.connect();
+await client.connect();
     app.post('/jwt',async(req,res)=>{
       const user=req.body;
       const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECCODE,{
@@ -71,33 +71,37 @@ async function run() {
       
       res.send(products)
     });
-    // productCount
-    app.get('/productCount',async(req,res)=>{
-      const totalProductNumber=await productCollection.estimatedDocumentCount();
-      res.send({totalProductNumber})
-    })
-    app.get('/conditionProducts',async(req,res)=>{
-      // const {page,size,productCategory,color}=req.query;
-      console.log(req.query);
-      console.log(req,'dsfsfsd')
-      const page=parseInt(req.query.page);
-      const size=parseInt(req.query.size);
-      const productCategory=req.query.productCategory;
-      console.log(productCategory,'productCategory')
 
-/*       const productCategory=req.query.productCategory;
-console.log('prductCategory',productCategory)
-      const query={productCategory:productCategory};
-      console.log(query,productCategory,'query') */
-      // if (category) {
-      //   query.category=category;
-      // }
-      // if (color) {
-      //   query.color=color;
-      // }
-      console.log(page,size)
-      const result=await productCollection.find().skip(page*size).limit(size).toArray();
-      res.send(result)
+    app.get('/conditionProducts',async(req,res)=>{
+
+       const {page,size,productCategory,productColor,minPrice,maxPrice}=req.query;
+   console.log(minPrice,maxPrice)
+      const initPage=parseInt(page);
+      const initSize=parseInt(size);
+
+     const query={};
+     if (minPrice || maxPrice) {
+      query.productPrice={};
+      if (minPrice) {
+        if (minPrice) query.productPrice.$gte = parseInt(minPrice);
+      }
+      if (maxPrice) query.productPrice.$lte = parseInt(maxPrice);
+     }
+     if(productCategory && productCategory !== 'allCategory'){
+      query.productCategory=productCategory;
+     }
+     if (productColor && productColor !== 'allColors') {
+      query.productColor=productColor;
+     }
+ 
+     console.log(productCategory,'dsfsdfs')
+      const totalProducts=await productCollection.find(query).count();
+
+      
+      const result=await productCollection.find(query).skip(initPage*initSize).limit(initSize).toArray();
+      console.log(result,'result')
+    
+      res.send({totalProducts,result})
     });
     // add upload a products 
     app.post('/products',verifyToken,verifyAdmin, async(req,res)=>{
