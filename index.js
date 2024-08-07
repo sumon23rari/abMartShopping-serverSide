@@ -32,7 +32,7 @@ async function run() {
     const userMessageCollection=database.collection('messageInfo');
     const paymentCollection=database.collection('paymentInfo')
     // Connect the client to the server	(optional starting in v4.7)
-await client.connect();
+//await client.connect();
     app.post('/jwt',async(req,res)=>{
       const user=req.body;
       const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECCODE,{
@@ -103,6 +103,12 @@ await client.connect();
     
       res.send({totalProducts,result})
     });
+    app.get('/similarProducts',async(req,res)=>{
+      const productCategory=req.query.productCategory;
+      const query={productCategory:productCategory}
+      const result=await productCollection.find(query).toArray();
+      res.send(result)
+    })
     // add upload a products 
     app.post('/products',verifyToken,verifyAdmin, async(req,res)=>{
       const insertProducts=req.body;
